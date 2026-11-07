@@ -1,0 +1,15 @@
+@"
+node_modules/
+coverage/
+
+.env
+.env.*
+!.env.example
+
+*.sqlite
+*.sqlite3
+*.db
+
+.DS_Store
+npm-debug.log*
+"@ | Set-Content .gitignore -Encoding utf8
