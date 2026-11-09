@@ -189,7 +189,7 @@ describe("ProductService", () => {
       expect(Product.findAll).not.toHaveBeenCalled();
     });
 
-    it("[LÍMITE] debe aplicar ordenamiento, límite y desplazamiento", async () => {
+    it("[LÍMITE] debe aplicar ordenamiento y paginación para varias categorías", async () => {
       Product.findAll.mockResolvedValue([]);
 
       await ProductService.getProductsByCategories("2,3", {
