@@ -219,7 +219,6 @@ describe("Cart Routes", () => {
       expect(updatedItem.quantity).toBe(5);
     });
 
-    // HALLAZGO: updateCartItem permite quantity = 0; incumple la regla de cantidad positiva.
     it("[LÍMITE] debe rechazar una cantidad igual a cero al actualizar un artículo", async () => {
       const item = await CartItem.create({
         cartId: cart.id,
