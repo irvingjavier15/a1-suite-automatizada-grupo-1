@@ -31,5 +31,8 @@
   },
   "jest": {
     "testEnvironment": "node"
+  },
+  "allowScripts": {
+    "sqlite3@5.1.7": true
   }
 }

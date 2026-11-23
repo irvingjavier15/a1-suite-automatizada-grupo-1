@@ -1,33 +1,33 @@
-jest.mock("../../models/cart", () => ({
+jest.mock('../../models/cart', () => ({
   create: jest.fn(),
   findByPk: jest.fn(),
 }));
 
-jest.mock("../../models/cartItem", () => ({
+jest.mock('../../models/cartItem', () => ({
   findOne: jest.fn(),
   findAll: jest.fn(),
   create: jest.fn(),
   findByPk: jest.fn(),
 }));
 
-jest.mock("../../models/product", () => ({
+jest.mock('../../models/product', () => ({
   findByPk: jest.fn(),
 }));
 
-const CartService = require("../../services/cartService");
-const Cart = require("../../models/cart");
-const CartItem = require("../../models/cartItem");
-const Product = require("../../models/product");
+const CartService = require('../../services/cartService');
+const Cart = require('../../models/cart');
+const CartItem = require('../../models/cartItem');
+const Product = require('../../models/product');
 
-describe("CartService", () => {
+describe('CartService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("createCart", () => {
-    it("[VÁLIDA] debe crear un nuevo carrito", async () => {
+  describe('createCart', () => {
+    it('[VÁLIDA] debe crear un nuevo carrito', async () => {
       const userId = 1;
-      const expectedCart = { id: 1, userId, status: "open" };
+      const expectedCart = { id: 1, userId, status: 'open' };
 
       Cart.create.mockResolvedValue(expectedCart);
 
@@ -38,14 +38,14 @@ describe("CartService", () => {
     });
   });
 
-  describe("addItemToCart", () => {
+  describe('addItemToCart', () => {
     const mockProduct = {
       id: 1,
       inventory: 10,
       price: 100,
     };
 
-    it("[VÁLIDA] debe agregar un producto existente con inventario suficiente", async () => {
+    it('[VÁLIDA] debe agregar un producto existente con inventario suficiente', async () => {
       const expectedItem = {
         cartId: 1,
         productId: 1,
@@ -67,38 +67,38 @@ describe("CartService", () => {
       expect(result).toEqual(expectedItem);
     });
 
-    it("[INVÁLIDA] debe rechazar un producto inexistente", async () => {
+    it('[INVÁLIDA] debe rechazar un producto inexistente', async () => {
       Product.findByPk.mockResolvedValue(null);
 
       await expect(CartService.addItemToCart(1, 99, 2)).rejects.toThrow(
-        "Product not found",
+        'Product not found',
       );
 
       expect(CartItem.create).not.toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad superior al inventario", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad superior al inventario', async () => {
       Product.findByPk.mockResolvedValue(mockProduct);
 
       await expect(CartService.addItemToCart(1, 1, 11)).rejects.toThrow(
-        "Not enough inventory available",
+        'Not enough inventory available',
       );
 
       expect(CartItem.create).not.toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad muy grande con un producto existente", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad muy grande con un producto existente', async () => {
       Product.findByPk.mockResolvedValue(mockProduct);
 
       await expect(CartService.addItemToCart(1, 1, 999)).rejects.toThrow(
-        "Not enough inventory available",
+        'Not enough inventory available',
       );
 
       expect(Product.findByPk).toHaveBeenCalledWith(1);
       expect(CartItem.create).not.toHaveBeenCalled();
     });
 
-    it("[LÍMITE] debe permitir agregar una cantidad exactamente igual al inventario", async () => {
+    it('[LÍMITE] debe permitir agregar una cantidad exactamente igual al inventario', async () => {
       const expectedItem = {
         cartId: 1,
         productId: 1,
@@ -120,7 +120,29 @@ describe("CartService", () => {
       expect(result).toEqual(expectedItem);
     });
 
-    it("[VÁLIDA] debe incrementar la cantidad de un producto ya existente", async () => {
+    //MEJORA PARA MUTANTE 1 LINEA 26 y 27
+    it('[VÁLIDA] debe consultar un item existe en el carrito antes crear o incrementar la cantidad', async () => {
+      Product.findByPk.mockResolvedValue(mockProduct);
+      CartItem.findOne.mockResolvedValue(null);
+      CartItem.create.mockResolvedValue({
+        cartId: 1,
+        productId: 2,
+        quantity: 1,
+      });
+
+      await CartService.addItemToCart(1, 2, 1);
+
+      expect(CartItem.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            cartId: 1,
+            productId: 2,
+          }),
+        }),
+      );
+    });
+
+    it('[VÁLIDA] debe incrementar la cantidad de un producto ya existente', async () => {
       const existingItem = {
         cartId: 1,
         productId: 1,
@@ -138,7 +160,7 @@ describe("CartService", () => {
       expect(result).toBe(existingItem);
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad combinada superior al inventario", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad combinada superior al inventario', async () => {
       const existingItem = {
         cartId: 1,
         productId: 1,
@@ -150,13 +172,13 @@ describe("CartService", () => {
       CartItem.findOne.mockResolvedValue(existingItem);
 
       await expect(CartService.addItemToCart(1, 1, 3)).rejects.toThrow(
-        "Not enough inventory available",
+        'Not enough inventory available',
       );
 
       expect(existingItem.save).not.toHaveBeenCalled();
     });
 
-    it("[LÍMITE] debe rechazar una cantidad igual a cero", async () => {
+    it('[LÍMITE] debe rechazar una cantidad igual a cero', async () => {
       Product.findByPk.mockResolvedValue(mockProduct);
       CartItem.findOne.mockResolvedValue(null);
       await expect(CartService.addItemToCart(1, 1, 0)).rejects.toThrow();
@@ -164,7 +186,7 @@ describe("CartService", () => {
       expect(CartItem.create).not.toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad negativa", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad negativa', async () => {
       Product.findByPk.mockResolvedValue(mockProduct);
       CartItem.findOne.mockResolvedValue(null);
       await expect(CartService.addItemToCart(1, 1, -2)).rejects.toThrow();
@@ -172,7 +194,7 @@ describe("CartService", () => {
       expect(CartItem.create).not.toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad decimal", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad decimal', async () => {
       Product.findByPk.mockResolvedValue(mockProduct);
       CartItem.findOne.mockResolvedValue(null);
       await expect(CartService.addItemToCart(1, 1, 1.5)).rejects.toThrow();
@@ -180,11 +202,11 @@ describe("CartService", () => {
       expect(CartItem.create).not.toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad muy grande cuando el producto no existe", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad muy grande cuando el producto no existe', async () => {
       Product.findByPk.mockResolvedValue(null);
 
       await expect(CartService.addItemToCart(1, 999, 999)).rejects.toThrow(
-        "Product not found",
+        'Product not found',
       );
 
       expect(Product.findByPk).toHaveBeenCalledWith(999);
@@ -192,16 +214,16 @@ describe("CartService", () => {
     });
   });
 
-  describe("getCartItems", () => {
-    it("[INVÁLIDA] debe rechazar un ID de carrito no numérico", async () => {
-      await expect(CartService.getCartItems("abc")).rejects.toThrow(
-        "Cart ID should be a number",
+  describe('getCartItems', () => {
+    it('[INVÁLIDA] debe rechazar un ID de carrito no numérico', async () => {
+      await expect(CartService.getCartItems('abc')).rejects.toThrow(
+        'Cart ID should be a number',
       );
 
       expect(Cart.findByPk).not.toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe retornar null cuando el carrito no existe", async () => {
+    it('[INVÁLIDA] debe retornar null cuando el carrito no existe', async () => {
       Cart.findByPk.mockResolvedValue(null);
 
       const result = await CartService.getCartItems(99);
@@ -210,7 +232,30 @@ describe("CartService", () => {
       expect(CartItem.findAll).not.toHaveBeenCalled();
     });
 
-    it("[VÁLIDA] debe retornar los productos con sus totales calculados", async () => {
+    it('[VÁLIDA] debe consultar los ítems de un carrito especifico', async () => {
+      const item = {
+        quantity: 2,
+        Product: { price: 100, taxRate: 0.07 },
+        toJSON: () => ({
+          quantity: 2,
+          Product: { price: 100, taxRate: 0.07 },
+        }),
+      };
+
+      Cart.findByPk.mockResolvedValue({ id: 1 });
+      CartItem.findAll.mockResolvedValue([item]);
+
+      await CartService.getCartItems(1);
+
+      expect(Cart.findByPk).toHaveBeenCalledWith(1);
+      expect(CartItem.findAll).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ cartId: 1 }),
+        }),
+      );
+    });
+
+    it('[VÁLIDA] debe retornar los productos con sus totales calculados', async () => {
       const item = {
         quantity: 2,
         Product: {
@@ -249,8 +294,8 @@ describe("CartService", () => {
     });
   });
 
-  describe("updateCartItem", () => {
-    it("[VÁLIDA] debe actualizar la cantidad con inventario suficiente", async () => {
+  describe('updateCartItem', () => {
+    it('[VÁLIDA] debe actualizar la cantidad con inventario suficiente', async () => {
       const item = {
         quantity: 2,
         Product: { inventory: 10 },
@@ -266,15 +311,15 @@ describe("CartService", () => {
       expect(result).toBe(item);
     });
 
-    it("[INVÁLIDA] debe rechazar un artículo inexistente", async () => {
+    it('[INVÁLIDA] debe rechazar un artículo inexistente', async () => {
       CartItem.findByPk.mockResolvedValue(null);
 
       await expect(CartService.updateCartItem(99, 2)).rejects.toThrow(
-        "Item not found",
+        'Item not found',
       );
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad superior al inventario al actualizar", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad superior al inventario al actualizar', async () => {
       const item = {
         quantity: 2,
         Product: { inventory: 5 },
@@ -284,15 +329,15 @@ describe("CartService", () => {
       CartItem.findByPk.mockResolvedValue(item);
 
       await expect(CartService.updateCartItem(1, 6)).rejects.toThrow(
-        "Not enough inventory available",
+        'Not enough inventory available',
       );
 
       expect(item.save).not.toHaveBeenCalled();
     });
   });
 
-  describe("removeCartItem", () => {
-    it("[VÁLIDA] debe eliminar un artículo existente", async () => {
+  describe('removeCartItem', () => {
+    it('[VÁLIDA] debe eliminar un artículo existente', async () => {
       const item = {
         destroy: jest.fn().mockResolvedValue(true),
       };
@@ -304,11 +349,11 @@ describe("CartService", () => {
       expect(item.destroy).toHaveBeenCalled();
     });
 
-    it("[INVÁLIDA] debe rechazar la eliminación de un artículo inexistente", async () => {
+    it('[INVÁLIDA] debe rechazar la eliminación de un artículo inexistente', async () => {
       CartItem.findByPk.mockResolvedValue(null);
 
       await expect(CartService.removeCartItem(99)).rejects.toThrow(
-        "Item not found",
+        'Item not found',
       );
     });
   });

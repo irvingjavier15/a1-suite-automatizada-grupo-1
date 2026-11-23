@@ -1,21 +1,22 @@
-const request = require("supertest");
-const express = require("express");
-const bodyParser = require("body-parser");
+const request = require('supertest');
+const express = require('express');
+const bodyParser = require('body-parser');
 
-const { initTestDb, closeTestDb } = require("../setup/testDb");
+const { initTestDb, closeTestDb } = require('../setup/testDb');
 
-const cartRouter = require("../../routes/cart");
+const cartRouter = require('../../routes/cart');
 
-const Cart = require("../../models/cart");
-const CartItem = require("../../models/cartItem");
-const Product = require("../../models/product");
-const Category = require("../../models/category");
+const Cart = require('../../models/cart');
+const CartItem = require('../../models/cartItem');
+const Product = require('../../models/product');
+const Category = require('../../models/category');
+const Order = require('../../models/order');
 
 const app = express();
 app.use(bodyParser.json());
-app.use("/api/carts", cartRouter);
+app.use('/api/carts', cartRouter);
 
-describe("Cart Routes", () => {
+describe('Cart Routes', () => {
   let cart;
   let product;
 
@@ -28,6 +29,7 @@ describe("Cart Routes", () => {
   });
 
   beforeEach(async () => {
+    await Order.destroy({ where: {} });
     await CartItem.destroy({ where: {} });
     await Cart.destroy({ where: {} });
     await Product.destroy({ where: {} });
@@ -36,11 +38,11 @@ describe("Cart Routes", () => {
 
   const createTestData = async () => {
     const category = await Category.create({
-      name: "Test Category",
+      name: 'Test Category',
     });
 
     product = await Product.create({
-      name: "Test Product",
+      name: 'Test Product',
       price: 100,
       inventory: 10,
       taxRate: 0.07,
@@ -48,30 +50,30 @@ describe("Cart Routes", () => {
     });
 
     cart = await Cart.create({
-      userId: "1",
+      userId: '1',
     });
   };
 
-  describe("POST /api/carts/:userId", () => {
-    it("[VÁLIDA] debe crear un carrito para un usuario", async () => {
-      const response = await request(app).post("/api/carts/1").expect(201);
+  describe('POST /api/carts/:userId', () => {
+    it('[VÁLIDA] debe crear un carrito para un usuario', async () => {
+      const response = await request(app).post('/api/carts/1').expect(201);
 
-      expect(response.body).toHaveProperty("id");
-      expect(response.body.userId).toBe("1");
+      expect(response.body).toHaveProperty('id');
+      expect(response.body.userId).toBe('1');
 
       const savedCart = await Cart.findByPk(response.body.id);
 
       expect(savedCart).not.toBeNull();
-      expect(String(savedCart.userId)).toBe("1");
+      expect(String(savedCart.userId)).toBe('1');
     });
   });
 
-  describe("POST /api/carts/:cartId/items", () => {
+  describe('POST /api/carts/:cartId/items', () => {
     beforeEach(async () => {
       await createTestData();
     });
 
-    it("[VÁLIDA] debe agregar un producto con inventario suficiente", async () => {
+    it('[VÁLIDA] debe agregar un producto con inventario suficiente', async () => {
       const response = await request(app)
         .post(`/api/carts/${cart.id}/items`)
         .send({
@@ -95,7 +97,7 @@ describe("Cart Routes", () => {
       expect(savedItem.quantity).toBe(2);
     });
 
-    it("[INVÁLIDA] debe rechazar un producto inexistente", async () => {
+    it('[INVÁLIDA] debe rechazar un producto inexistente', async () => {
       const response = await request(app)
         .post(`/api/carts/${cart.id}/items`)
         .send({
@@ -104,14 +106,14 @@ describe("Cart Routes", () => {
         })
         .expect(400);
 
-      expect(response.body.error).toBe("Product not found");
+      expect(response.body.error).toBe('Product not found');
 
       const items = await CartItem.findAll();
 
       expect(items).toHaveLength(0);
     });
 
-    it("[LÍMITE] debe rechazar una cantidad igual a cero", async () => {
+    it('[LÍMITE] debe rechazar una cantidad igual a cero', async () => {
       const response = await request(app)
         .post(`/api/carts/${cart.id}/items`)
         .send({
@@ -120,12 +122,12 @@ describe("Cart Routes", () => {
         })
         .expect(400);
 
-      expect(response.body.error).toBe("Quantity must be a positive integer");
+      expect(response.body.error).toBe('Quantity must be a positive integer');
 
       expect(await CartItem.count()).toBe(0);
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad negativa", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad negativa', async () => {
       const response = await request(app)
         .post(`/api/carts/${cart.id}/items`)
         .send({
@@ -134,12 +136,12 @@ describe("Cart Routes", () => {
         })
         .expect(400);
 
-      expect(response.body.error).toBe("Quantity must be a positive integer");
+      expect(response.body.error).toBe('Quantity must be a positive integer');
 
       expect(await CartItem.count()).toBe(0);
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad superior al inventario", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad superior al inventario', async () => {
       const response = await request(app)
         .post(`/api/carts/${cart.id}/items`)
         .send({
@@ -148,30 +150,30 @@ describe("Cart Routes", () => {
         })
         .expect(400);
 
-      expect(response.body.error).toBe("Not enough inventory available");
+      expect(response.body.error).toBe('Not enough inventory available');
 
       expect(await CartItem.count()).toBe(0);
     });
   });
 
-  describe("GET /api/carts/:cartId/items", () => {
-    it("[INVÁLIDA] debe retornar 404 cuando el carrito no existe", async () => {
+  describe('GET /api/carts/:cartId/items', () => {
+    it('[INVÁLIDA] debe retornar 404 cuando el carrito no existe', async () => {
       const response = await request(app)
-        .get("/api/carts/999/items")
+        .get('/api/carts/999/items')
         .expect(404);
 
       expect(response.body.error).toBe("Cart doesn't exist");
     });
 
-    it("[INVÁLIDA] debe rechazar un identificador de carrito no numérico", async () => {
+    it('[INVÁLIDA] debe rechazar un identificador de carrito no numérico', async () => {
       const response = await request(app)
-        .get("/api/carts/nonidad123/items")
+        .get('/api/carts/nonidad123/items')
         .expect(400);
 
-      expect(response.body.error).toBe("Cart ID should be a number");
+      expect(response.body.error).toBe('Cart ID should be a number');
     });
 
-    it("[VÁLIDA] debe retornar los artículos y calcular correctamente los totales", async () => {
+    it('[VÁLIDA] debe retornar los artículos y calcular correctamente los totales', async () => {
       await createTestData();
 
       await CartItem.create({
@@ -195,12 +197,12 @@ describe("Cart Routes", () => {
     });
   });
 
-  describe("PUT /api/carts/:cartId/items/:itemId", () => {
+  describe('PUT /api/carts/:cartId/items/:itemId', () => {
     beforeEach(async () => {
       await createTestData();
     });
 
-    it("[VÁLIDA] debe actualizar la cantidad de un artículo existente", async () => {
+    it('[VÁLIDA] debe actualizar la cantidad de un artículo existente', async () => {
       const item = await CartItem.create({
         cartId: cart.id,
         productId: product.id,
@@ -219,7 +221,7 @@ describe("Cart Routes", () => {
       expect(updatedItem.quantity).toBe(5);
     });
 
-    it("[LÍMITE] debe rechazar una cantidad igual a cero al actualizar un artículo", async () => {
+    it('[LÍMITE] debe rechazar una cantidad igual a cero al actualizar un artículo', async () => {
       const item = await CartItem.create({
         cartId: cart.id,
         productId: product.id,
@@ -231,13 +233,13 @@ describe("Cart Routes", () => {
         .send({ quantity: 0 })
         .expect(400);
 
-      expect(response.body.error).toBe("Quantity must be a positive integer");
+      expect(response.body.error).toBe('Quantity must be a positive integer');
 
       const savedItem = await CartItem.findByPk(item.id);
       expect(savedItem.quantity).toBe(2);
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad negativa al actualizar un artículo", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad negativa al actualizar un artículo', async () => {
       const item = await CartItem.create({
         cartId: cart.id,
         productId: product.id,
@@ -249,13 +251,13 @@ describe("Cart Routes", () => {
         .send({ quantity: -2 })
         .expect(400);
 
-      expect(response.body.error).toBe("Quantity must be a positive integer");
+      expect(response.body.error).toBe('Quantity must be a positive integer');
 
       const savedItem = await CartItem.findByPk(item.id);
       expect(savedItem.quantity).toBe(2);
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad decimal al actualizar un artículo", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad decimal al actualizar un artículo', async () => {
       const item = await CartItem.create({
         cartId: cart.id,
         productId: product.id,
@@ -267,13 +269,13 @@ describe("Cart Routes", () => {
         .send({ quantity: 2.5 })
         .expect(400);
 
-      expect(response.body.error).toBe("Quantity must be a positive integer");
+      expect(response.body.error).toBe('Quantity must be a positive integer');
 
       const savedItem = await CartItem.findByPk(item.id);
       expect(savedItem.quantity).toBe(2);
     });
 
-    it("[INVÁLIDA] debe rechazar una cantidad superior al inventario al actualizar un artículo", async () => {
+    it('[INVÁLIDA] debe rechazar una cantidad superior al inventario al actualizar un artículo', async () => {
       const item = await CartItem.create({
         cartId: cart.id,
         productId: product.id,
@@ -285,31 +287,31 @@ describe("Cart Routes", () => {
         .send({ quantity: 11 })
         .expect(400);
 
-      expect(response.body.error).toBe("Not enough inventory available");
+      expect(response.body.error).toBe('Not enough inventory available');
 
       const savedItem = await CartItem.findByPk(item.id);
       expect(savedItem.quantity).toBe(2);
     });
 
-    it("[INVÁLIDA] debe rechazar la actualización de un artículo inexistente", async () => {
+    it('[INVÁLIDA] debe rechazar la actualización de un artículo inexistente', async () => {
       const response = await request(app)
         .put(`/api/carts/${cart.id}/items/999`)
         .send({ quantity: 3 })
         .expect(400);
 
-      expect(response.body.error).toBe("Item not found");
+      expect(response.body.error).toBe('Item not found');
 
       const items = await CartItem.findAll();
       expect(items).toHaveLength(0);
     });
   });
 
-  describe("DELETE /api/carts/:cartId/items/:itemId", () => {
+  describe('DELETE /api/carts/:cartId/items/:itemId', () => {
     beforeEach(async () => {
       await createTestData();
     });
 
-    it("[VÁLIDA] debe eliminar un artículo existente", async () => {
+    it('[VÁLIDA] debe eliminar un artículo existente', async () => {
       const item = await CartItem.create({
         cartId: cart.id,
         productId: product.id,
@@ -325,15 +327,46 @@ describe("Cart Routes", () => {
       expect(deletedItem).toBeNull();
     });
 
-    it("[INVÁLIDA] debe rechazar la eliminación de un artículo inexistente", async () => {
+    it('[INVÁLIDA] debe rechazar la eliminación de un artículo inexistente', async () => {
       const response = await request(app)
         .delete(`/api/carts/${cart.id}/items/999`)
         .expect(400);
 
-      expect(response.body.error).toBe("Item not found");
+      expect(response.body.error).toBe('Item not found');
 
       const items = await CartItem.findAll();
       expect(items).toHaveLength(0);
+    });
+  });
+
+  // MEJORA POR MUTANTE A LINEA 65 DE routes/cart.js
+  describe('POST /api/carts/:cartId/checkout', () => {
+    beforeEach(async () => {
+      await createTestData();
+      await CartItem.create({
+        cartId: cart.id,
+        productId: product.id,
+        quantity: 2,
+      });
+    });
+
+    it('[VÁLIDA] debe procesar el checkout y responder con la orden', async () => {
+      const response = await request(app)
+        .post(`/api/carts/${cart.id}/checkout`)
+        .expect(201);
+
+      expect(response.body).toBeDefined();
+      expect(response.body).toHaveProperty('id');
+    });
+
+    it('[INVÁLIDA] debe responder error cuando el checkout falla por carrito inexistente', async () => {
+      const response = await request(app)
+        .post('/api/carts/99999/checkout')
+        .send();
+
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      expect(response.status).toBeLessThan(500);
+      expect(response.body).toHaveProperty('error');
     });
   });
 });
