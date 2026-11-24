@@ -13,3 +13,5 @@ coverage/
 .DS_Store
 npm-debug.log*
 "@ | Set-Content .gitignore -Encoding utf8
+
+.stryker-tmp
