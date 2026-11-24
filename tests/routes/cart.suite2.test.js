@@ -127,6 +127,19 @@ describe('Cart Routes', () => {
       expect(await CartItem.count()).toBe(0);
     });
 
+    it('[INVÁLIDA] debe rechazar una cantidad decimal', async () => {
+      const response = await request(app)
+        .post(`/api/carts/${cart.id}/items`)
+        .send({
+          productId: product.id,
+          quantity: 1.5,
+        })
+        .expect(400);
+
+      expect(response.body.error).toBe('Quantity must be a positive integer');
+      expect(await CartItem.count()).toBe(0);
+    });
+
     it('[INVÁLIDA] debe rechazar una cantidad negativa', async () => {
       const response = await request(app)
         .post(`/api/carts/${cart.id}/items`)
@@ -304,6 +317,22 @@ describe('Cart Routes', () => {
       const items = await CartItem.findAll();
       expect(items).toHaveLength(0);
     });
+
+    it('[LÍMITE] debe actualizar un artículo hasta el inventario disponible', async () => {
+      const item = await CartItem.create({
+        cartId: cart.id,
+        productId: product.id,
+        quantity: 2,
+      });
+
+      const response = await request(app)
+        .put(`/api/carts/${cart.id}/items/${item.id}`)
+        .send({ quantity: 10 })
+        .expect(200);
+
+      expect(response.body.quantity).toBe(10);
+      expect((await CartItem.findByPk(item.id)).quantity).toBe(10);
+    });
   });
 
   describe('DELETE /api/carts/:cartId/items/:itemId', () => {
@@ -337,6 +366,26 @@ describe('Cart Routes', () => {
       const items = await CartItem.findAll();
       expect(items).toHaveLength(0);
     });
+
+    it('[VÁLIDA] debe eliminar solo el artículo solicitado y conservar los demás', async () => {
+      const item = await CartItem.create({
+        cartId: cart.id,
+        productId: product.id,
+        quantity: 2,
+      });
+      const remainingItem = await CartItem.create({
+        cartId: cart.id,
+        productId: product.id,
+        quantity: 3,
+      });
+
+      const response = await request(app)
+        .delete(`/api/carts/${cart.id}/items/${item.id}`)
+        .expect(204);
+
+      expect(await CartItem.findByPk(item.id)).toBeNull();
+      expect((await CartItem.findByPk(remainingItem.id)).quantity).toBe(3);
+    });
   });
 
   // MEJORA POR MUTANTE A LINEA 65 DE routes/cart.js
@@ -355,18 +404,101 @@ describe('Cart Routes', () => {
         .post(`/api/carts/${cart.id}/checkout`)
         .expect(201);
 
-      expect(response.body).toBeDefined();
       expect(response.body).toHaveProperty('id');
+      expect(response.body.cartId).toBe(cart.id);
+      expect(response.body).toMatchObject({
+        subtotal: 200,
+        discount: 0,
+        taxable: 200,
+        tax: 14,
+        shipping: 0,
+        total: 214,
+      });
+      expect(response.body.lines).toHaveLength(1);
+      expect(response.body.lines[0]).toMatchObject({
+        productId: product.id,
+        quantity: 2,
+        unitPrice: 100,
+        lineSubtotal: 200,
+        lineDiscount: 0,
+        lineTax: 14,
+      });
+
+      expect((await Cart.findByPk(cart.id)).status).toBe('checked_out');
+      expect((await Product.findByPk(product.id)).inventory).toBe(8);
+
+      const savedOrder = await Order.findOne({ where: { cartId: cart.id } });
+      expect(savedOrder).not.toBeNull();
+
+      const orderResponse = await request(app)
+        .get(`/api/carts/${cart.id}/order`)
+        .expect(200);
+      expect(orderResponse.body.id).toBe(response.body.id);
     });
 
     it('[INVÁLIDA] debe responder error cuando el checkout falla por carrito inexistente', async () => {
       const response = await request(app)
         .post('/api/carts/99999/checkout')
-        .send();
+        .send()
+        .expect(404);
 
-      expect(response.status).toBeGreaterThanOrEqual(400);
-      expect(response.status).toBeLessThan(500);
-      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toBe("Cart doesn't exist");
+    });
+
+    it('[INVÁLIDA] debe rechazar un segundo checkout sin volver a descontar inventario', async () => {
+      await request(app)
+        .post(`/api/carts/${cart.id}/checkout`)
+        .expect(201);
+
+      const response = await request(app)
+        .post(`/api/carts/${cart.id}/checkout`)
+        .expect(400);
+
+      expect(response.body.error).toBe('Cart already checked out');
+      expect((await Product.findByPk(product.id)).inventory).toBe(8);
+      expect(await Order.count({ where: { cartId: cart.id } })).toBe(1);
+    });
+
+    it('[VÁLIDA] debe cobrar envío bajo el umbral y no cobrarlo al alcanzar el umbral', async () => {
+      await Product.update(
+        { price: 40, taxRate: 0 },
+        { where: { id: product.id } },
+      );
+      await CartItem.update({ quantity: 1 }, { where: { cartId: cart.id } });
+
+      const belowThreshold = await request(app)
+        .post(`/api/carts/${cart.id}/checkout`)
+        .expect(201);
+
+      expect(belowThreshold.body).toMatchObject({
+        subtotal: 40,
+        shipping: 5,
+        total: 45,
+      });
+
+      const thresholdCart = await Cart.create({ userId: '2' });
+      const thresholdProduct = await Product.create({
+        name: 'Threshold Product',
+        price: 50,
+        inventory: 10,
+        taxRate: 0,
+        categoryId: product.categoryId,
+      });
+      await CartItem.create({
+        cartId: thresholdCart.id,
+        productId: thresholdProduct.id,
+        quantity: 1,
+      });
+
+      const atThreshold = await request(app)
+        .post(`/api/carts/${thresholdCart.id}/checkout`)
+        .expect(201);
+
+      expect(atThreshold.body).toMatchObject({
+        subtotal: 50,
+        shipping: 0,
+        total: 50,
+      });
     });
   });
 });

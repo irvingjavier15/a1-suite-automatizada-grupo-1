@@ -178,6 +178,24 @@ describe('CartService', () => {
       expect(existingItem.save).not.toHaveBeenCalled();
     });
 
+    it('[LÍMITE] debe permitir que la cantidad combinada alcance el inventario exacto', async () => {
+      const existingItem = {
+        cartId: 1,
+        productId: 1,
+        quantity: 8,
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      Product.findByPk.mockResolvedValue(mockProduct);
+      CartItem.findOne.mockResolvedValue(existingItem);
+
+      const result = await CartService.addItemToCart(1, 1, 2);
+
+      expect(existingItem.quantity).toBe(10);
+      expect(existingItem.save).toHaveBeenCalled();
+      expect(result).toBe(existingItem);
+    });
+
     it('[LÍMITE] debe rechazar una cantidad igual a cero', async () => {
       Product.findByPk.mockResolvedValue(mockProduct);
       CartItem.findOne.mockResolvedValue(null);
@@ -311,6 +329,22 @@ describe('CartService', () => {
       expect(result).toBe(item);
     });
 
+    it('[LÍMITE] debe permitir actualizar hasta el inventario exacto', async () => {
+      const item = {
+        quantity: 2,
+        Product: { inventory: 5 },
+        save: jest.fn().mockResolvedValue(true),
+      };
+
+      CartItem.findByPk.mockResolvedValue(item);
+
+      const result = await CartService.updateCartItem(1, 5);
+
+      expect(item.quantity).toBe(5);
+      expect(item.save).toHaveBeenCalled();
+      expect(result).toBe(item);
+    });
+
     it('[INVÁLIDA] debe rechazar un artículo inexistente', async () => {
       CartItem.findByPk.mockResolvedValue(null);
 
@@ -318,6 +352,30 @@ describe('CartService', () => {
         'Item not found',
       );
     });
+
+    it.each([
+      ['cero', 0],
+      ['negativa', -1],
+      ['decimal', 1.5],
+    ])(
+      '[INVÁLIDA] debe rechazar una cantidad %s al actualizar',
+      async (_label, quantity) => {
+        const item = {
+          quantity: 2,
+          Product: { inventory: 10 },
+          save: jest.fn(),
+        };
+
+        CartItem.findByPk.mockResolvedValue(item);
+
+        await expect(CartService.updateCartItem(1, quantity)).rejects.toThrow(
+          'Quantity must be a positive integer',
+        );
+
+        expect(item.quantity).toBe(2);
+        expect(item.save).not.toHaveBeenCalled();
+      },
+    );
 
     it('[INVÁLIDA] debe rechazar una cantidad superior al inventario al actualizar', async () => {
       const item = {
