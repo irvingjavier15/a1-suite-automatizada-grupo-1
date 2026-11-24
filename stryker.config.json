@@ -7,9 +7,16 @@
     "clear-text",
     "progress"
   ],
+  "htmlReporter": {
+    "fileName": "reports/mutation/suite1.html"
+  },
   "testRunner": "jest",
   "jest": {
-    "enableFindRelatedTests": true
+    "enableFindRelatedTests": true,
+    "config": {
+      "testEnvironment": "node",
+      "testRegex": ".*(cart|cartService)\\.suite1\\.test\\.js$"
+    }
   },
   "testRunner_comment": "Take a look at https://stryker-mutator.io/docs/stryker-js/jest-runner for information about the jest plugin.",
   "coverageAnalysis": "perTest",

@@ -4,6 +4,12 @@
   "main": "app.js",
   "scripts": {
     "test": "jest",
+    "test:suite1": "jest --testPathPattern='\\.suite1\\.test\\.js$'",
+    "test:suite2": "jest --testPathPattern='\\.suite2\\.test\\.js$'",
+    "test:suite3": "jest --testPathPattern='\\.suite3\\.test\\.js$'",
+    "mutation:suite1": "stryker run",
+    "mutation:suite2": "stryker run --configFile stryker.suite2.config.json",
+    "mutation:suite3": "stryker run --configFile stryker.suite3.config.json",
     "lint": "npx eslint models services routes",
     "test:coverage": "jest --coverage --detectOpenHandles --forceExit",
     "start": "nodemon server.js"

@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "_comment": "Configuración de mutation testing para la suite 2.",
+  "packageManager": "npm",
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress"
+  ],
+  "htmlReporter": {
+    "fileName": "reports/mutation/suite2.html"
+  },
+  "testRunner": "jest",
+  "jest": {
+    "enableFindRelatedTests": true,
+    "config": {
+      "testEnvironment": "node",
+      "testRegex": ".*(cart|cartService)\\.suite2\\.test\\.js$"
+    }
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "./**/*.js",
+    "!tests/**/*.js",
+    "!node_modules/**/*.js",
+    "coverage/**/*.js",
+    "reports/**/*.js"
+  ]
+}

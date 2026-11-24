@@ -38,11 +38,11 @@ Si no tienen `curl` instalado, pueden utilizar otras herramientas como [Postman]
 
 El servidor monta los routers sin el prefijo `/api/v1`:
 
-| Recurso | Rutas principales |
-| --- | --- |
-| Productos | `GET /products`, `POST /products`, `GET /products/category/:categoryId` |
-| Categorías | `GET /categories`, `POST /categories` |
-| Carrito | `POST /cart/:userId`, `POST /cart/:cartId/items`, `GET /cart/:cartId/items`, `POST /cart/:cartId/checkout`, `GET /cart/:cartId/order` |
+| Recurso    | Rutas principales                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Productos  | `GET /products`, `POST /products`, `GET /products/category/:categoryId`                                                               |
+| Categorías | `GET /categories`, `POST /categories`                                                                                                 |
+| Carrito    | `POST /cart/:userId`, `POST /cart/:cartId/items`, `GET /cart/:cartId/items`, `POST /cart/:cartId/checkout`, `GET /cart/:cartId/order` |
 
 Algunas pruebas construyen una aplicación Express aislada y montan el mismo router bajo `/api/products` o `/api/carts`. Ese prefijo pertenece al arnés de la prueba; no es la URL del servidor levantado con `npm start`.
 
@@ -121,35 +121,48 @@ El cuerpo de un cobro sin cupón, de dos unidades a 100 con `taxRate` 0.07, tien
 
 El JSON es `{ "error": "<texto>" }`.
 
-| Situación | Estado | Texto |
-| --- | --- | --- |
-| Carrito inexistente | 404 | `Cart doesn't exist` |
-| Id de carrito no numérico | 400 | `Cart ID should be a number` |
-| Carrito sin ítems | 400 | `Cart is empty` |
-| Carrito ya cobrado | 400 | `Cart already checked out` |
-| Cantidad que no es un entero mayor que cero | 400 | `Quantity must be a positive integer` |
-| Inventario insuficiente | 400 | `Not enough inventory available` |
-| Producto de la línea inexistente | 400 | `Product not found` |
-| Precio negativo | 400 | `Price must be zero or greater` |
-| `taxRate` fuera de 0 a 1 | 400 | `Tax rate must be between 0 and 1` |
-| `coupon` es un arreglo u otro valor que no es objeto | 400 | `Only one coupon is allowed` |
-| `type` distinto de `percent` y de `fixed` | 400 | `Coupon type must be percent or fixed` |
-| `value` que no es un número mayor que cero | 400 | `Coupon value must be greater than zero` |
-| Porcentaje mayor que 1 | 400 | `Percent coupon cannot exceed 1` |
-| Porcentaje sin mínimo válido | 400 | `Percent coupon requires a minimum subtotal` |
-| Subtotal por debajo del mínimo | 400 | `Coupon minimum not met` |
-| Monto fijo mayor que el subtotal | 400 | `Coupon exceeds subtotal` |
-| Pedido todavía no creado | 404 | `Order not found` |
+| Situación                                            | Estado | Texto                                        |
+| ---------------------------------------------------- | ------ | -------------------------------------------- |
+| Carrito inexistente                                  | 404    | `Cart doesn't exist`                         |
+| Id de carrito no numérico                            | 400    | `Cart ID should be a number`                 |
+| Carrito sin ítems                                    | 400    | `Cart is empty`                              |
+| Carrito ya cobrado                                   | 400    | `Cart already checked out`                   |
+| Cantidad que no es un entero mayor que cero          | 400    | `Quantity must be a positive integer`        |
+| Inventario insuficiente                              | 400    | `Not enough inventory available`             |
+| Producto de la línea inexistente                     | 400    | `Product not found`                          |
+| Precio negativo                                      | 400    | `Price must be zero or greater`              |
+| `taxRate` fuera de 0 a 1                             | 400    | `Tax rate must be between 0 and 1`           |
+| `coupon` es un arreglo u otro valor que no es objeto | 400    | `Only one coupon is allowed`                 |
+| `type` distinto de `percent` y de `fixed`            | 400    | `Coupon type must be percent or fixed`       |
+| `value` que no es un número mayor que cero           | 400    | `Coupon value must be greater than zero`     |
+| Porcentaje mayor que 1                               | 400    | `Percent coupon cannot exceed 1`             |
+| Porcentaje sin mínimo válido                         | 400    | `Percent coupon requires a minimum subtotal` |
+| Subtotal por debajo del mínimo                       | 400    | `Coupon minimum not met`                     |
+| Monto fijo mayor que el subtotal                     | 400    | `Coupon exceeds subtotal`                    |
+| Pedido todavía no creado                             | 404    | `Order not found`                            |
 
 ## Pruebas
 
-Para ejecutar las pruebas, deben ejecutar el siguiente comando:
+Se configuran 3 suites de pruebas
+SUITE1: Propia
+SUITE2: IA base
+SUITE3: IA con mejoras
+
+Se ejecutan de forma independiente con los siguientes comandos:
+
+```bash
+npm run test:suite1
+npm run test:suite2
+npm run test:suite3
+```
+
+Para ejecutar las tres suites se debe ejecutar:
 
 ```bash
 npm test
 ```
 
-Si quieren ver el coverage de las pruebas, pueden ejecutar el siguiente comando:
+Ver el coverage de las pruebas, ejecutar el siguiente comando:
 
 ```bash
 npm run test:coverage
@@ -157,10 +170,17 @@ npm run test:coverage
 
 ## Ejecutar mutation testing con stryker
 
-Para ejecutar mutation testing con stryker, deben ejecutar el siguiente comando:
+Se configuran 3 suites de pruebas
+SUITE1: Propia
+SUITE2: IA base
+SUITE3: IA con mejoras
+
+Se ejecutan de forma independiente con los siguientes comandos para el mutation test, genera un reporte independiente por cada una:
 
 ```bash
-npx stryker run
+npm run mutation:suite1
+npm run mutation:suite2
+npm run mutation:suite3
 ```
 
-Eso generará un reporte en el archivo `reports/mutation.html` que pueden abrir con cualquier navegador.
+Los reportes nuevos son `reports/mutation/suite1.html`, `reports/mutation/suite2.html` y `reports/mutation/suite3.html`, respectivamente. `npx stryker run` también ejecuta la suite 1.
