@@ -21,10 +21,7 @@
   "testRunner_comment": "Take a look at https://stryker-mutator.io/docs/stryker-js/jest-runner for information about the jest plugin.",
   "coverageAnalysis": "perTest",
   "mutate": [
-    "./**/*.js",
-    "!tests/**/*.js",
-    "!node_modules/**/*.js",
-    "coverage/**/*.js",
-    "reports/**/*.js"
+    "./services/cartService.js",
+    "./routes/cart.js"
   ]
 }
